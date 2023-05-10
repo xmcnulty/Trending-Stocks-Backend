@@ -2,49 +2,46 @@ import requests
 import datetime
 import time
 import asyncio
-from flask import Flask, request, jsonify
-
-#app = Flask(__name__)
-
-#@app.route('/api/aggregate', methods=['GET'])
-#def aggregate_data():
-#    return jsonify(get_trending_stocks())
     
 class RedditStocks:
     def __init__(self):
-        self.trending_stocks = None
-        self.last_updated = None
+        self.__trending_stocks = None
+        self.__last_updated = None
         self.__update_trending_stocks()
 
+    # Update the trending stocks every 15 minutes asynchronously. 15 minutes is the refresh rate of the tradestie api.
     async def __update(self):
         while True:
             # wait 15 minutes
             await asyncio.sleep(900)
             self.__update_trending_stocks()
 
+    # start the update loop
     async def start(self):
         # start the update loop
         await asyncio.gather(self.__update())
 
+    # fetch the trending stocks from the tradestie api
     def __update_trending_stocks(self):
         # fetch data from curl -XGET 'https://tradestie.com/api/v1/apps/reddit'
         trending_stocks_json = requests.get('https://tradestie.com/api/v1/apps/reddit').json()
 
         if len(trending_stocks_json) > 10:
-            self.trending_stocks = trending_stocks_json[:10]
+            self.__trending_stocks = trending_stocks_json[:10]
         else:
-            self.trending_stocks = trending_stocks_json
+            self.__trending_stocks = trending_stocks_json
 
         # get the comments for each stock
-        comments = self.__get_comments([stock['ticker'] for stock in self.trending_stocks])
+        comments = self.__get_comments([stock['ticker'] for stock in self.__trending_stocks])
 
         # add comments to trending stocks
-        for stock in self.trending_stocks:
+        for stock in self.__trending_stocks:
             stock['no_of_comments'] = len(comments[stock['ticker']])
             stock['comments'] = comments[stock['ticker']]
 
-        self.last_updated = datetime.datetime.utcnow()
+        self.__last_updated = datetime.datetime.utcnow()
 
+    # get comments for a list of tickers
     def __get_comments(self, tickers):
         comments = {}
 
@@ -79,13 +76,5 @@ class RedditStocks:
         return comments
     
     # returns a jsonified string containing last updated time and trending stocks
-    def get_trending_stocks_json(self):
-        return jsonify({
-            'last_updated': self.last_updated,
-            'trending_stocks': self.trending_stocks
-        })
-
-
-reddit_stocks = RedditStocks()
-
-print(reddit_stocks.trending_stocks)
+    def get_trending_stocks(self):
+        return {self.__last_updated.timestamp() : self.__trending_stocks}
