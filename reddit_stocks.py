@@ -59,27 +59,28 @@ class RedditStocks:
             try:
                 response = requests.get(pushshift_base_url)
                 comments_json = response.json()
-                comments = comments_json['data']
+                data = comments_json['data']
+
+                if len(data) > 0:
+                    comments[ticker] = dict()
+
+                    for comment in data:
+                        comments[ticker][comment['created_utc']] = {
+                            'author': comment['author'],
+                            'body': comment['body'],
+                            'score': comment['score'],
+                            'permalink': comment['permalink']
+                        }
+
+                    self.__trending_stocks[ticker]['no_of_comments'] = len(comments[ticker])
+                    
+                    self.__stock_comments[ticker] = comments
+                else:
+                    self.__stock_comments[ticker] = {}
             except:
                 print(f"Error fetching comments for {ticker}")
                 continue
 
-            if len(comments) > 0:
-                comments[ticker] = dict()
-
-                for comment in data:
-                    comments[ticker][comment['created_utc']] = {
-                        'author': comment['author'],
-                        'body': comment['body'],
-                        'score': comment['score'],
-                        'permalink': comment['permalink']
-                    }
-
-                self.__trending_stocks[ticker]['no_of_comments'] = len(comments[ticker])
-                
-                self.__stock_comments[ticker] = comments
-            else:
-                self.__stock_comments[ticker] = {}
 
             time.sleep(0.6)
     
