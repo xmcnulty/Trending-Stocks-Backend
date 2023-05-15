@@ -7,8 +7,8 @@ import threading
 class RedditStocks:
 
     def __init__(self):
-        self.__trending_stocks = None
-        self.__stock_comments = None # dictionary with ticker as key to comments as value
+        self.__trending_stocks = dict()
+        self.__stock_comments = dict() # dictionary with ticker as key to comments as value
         self.__last_updated = None
         self.__update_trending_stocks()
 
@@ -36,13 +36,13 @@ class RedditStocks:
         # fetch data from curl -XGET 'https://tradestie.com/api/v1/apps/reddit'
         trending_stocks_json = requests.get('https://tradestie.com/api/v1/apps/reddit').json()
 
-        if len(trending_stocks_json) > 10:
-            self.__trending_stocks = trending_stocks_json[:10]
-        else:
-            self.__trending_stocks = trending_stocks_json
+        trending_size = 10 if len(trending_stocks_json) > 10 else len(trending_stocks_json)
+
+        for x in range(trending_size):
+            self.__trending_stocks[trending_stocks_json[x]['ticker']] = trending_stocks_json[x]
 
         # get the comments for each stock
-        self.__get_comments([stock['ticker'] for stock in self.__trending_stocks])
+        self.__get_comments(self.__trending_stocks.keys())
 
         self.__last_updated = datetime.datetime.utcnow()
 
@@ -77,7 +77,7 @@ class RedditStocks:
                     self.__stock_comments[ticker] = comments
                 else:
                     self.__stock_comments[ticker] = {}
-            except:
+            except Exception as err:
                 print(f"Error fetching comments for {ticker}")
                 continue
 
